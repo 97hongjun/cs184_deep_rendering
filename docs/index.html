@@ -34,7 +34,16 @@
     <table style="width=100%">
         <tr>
             <td align="middle">
-                <img src="Images/GAN.png" width="580px"/>
+                <img src="GoodExamples/Finetuned/7real_A.png" width="256px"/>
+                <figcaption align="middle">Lambertian Raytraced Image</figcaption>
+            </td>
+            <td align="middle">
+                <img src="GoodExamples/Finetuned/7fake_B.png" width="256px"/>
+                <figcaption align="middle">Image Generated Via cGAN</figcaption>
+            </td>
+            <td align="middle">
+                <img src="GoodExamples/Finetuned/7real_B.png" width="256px"/>
+                <figcaption align="middle">Glass Raytraced Image</figcaption>
             </td>
         </tr>
     </table>
@@ -83,6 +92,17 @@
         upsample or convert the BRDF for more objects.
         <br/><br/>
     </p>
+    <div align="middle">
+        <table align="middle" style="width=100%">
+            <tr>
+                <td>
+                    <img src="GoodExamples/Data.png" align="middle" width="512px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+        </table>
+    </div>
     <h2 align="middle">Quality Improvement</h2>
     <p>LapSRN is a recent idea that extracts key features from an image and uses those features to improve the quality
         of the original image.
@@ -455,7 +475,7 @@
     </br>
     </br>
     </br>
-    <h2 align="middle"> Doge Palace 400 Epochs </h2>
+    <h2 align="middle"> Improved Doge Palace 400 Epochs </h2>
     <div align="middle">
         <table align="middle" style="width=100%">
             <tr>
@@ -537,7 +557,7 @@
     </br>
     </br>
     </br>
-    <h2 align="middle"> Grace 400 Epochs </h2>
+    <h2 align="middle"> Improved Grace 400 Epochs </h2>
     <div align="middle">
         <table align="middle" style="width=100%">
             <tr>
@@ -640,11 +660,56 @@
     <p>While the input and ground truth images were clearly paired (one has a diffuse ball, the other a glass one), in
         some of the images, the ball is difficult to locate and in these cases, the GAN mapped the result to an
         incorrect region of the image:</p>
+    <div align="middle">
+        <table align="middle" style="width=100%">
+            <tr>
+                <td>
+                    <figcaption align="middle">Lambertian</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass GAN Output</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass Ground Truth</figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/0_lambert.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/0.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/0_glass.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="GoodExamples/1_lambert.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/1.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/1_glass.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+        </table>
+    </div>
 
     <p>Another failure case is in images with blatant occlusion. The glass sphere refracts light behind it but its FOV
         is significantly larger than that of the camera. Therefore, especially when the camera is close to the ball, it
         is unreasonable for the GAN or even a human to reconstruct occluded portions of the scene onto the sphere’s
-        surface. Examples:</p>
+        surface.</p>
 
     <h3 align="middle"> Future Work </h3>
     <p>Ideally, we would like to get better results faster. The most important thing to learn is the physics of light
@@ -661,9 +726,26 @@
     <h3 align="middle"> PPT and Video </h3>
 
 
-    <a href="https://www.youtube.com/watch?v=kif628mP_OI&feature=youtu.be">Video Presentation</a>
-    <a href="https://docs.google.com/presentation/d/1LQGJmR4-aPc1ka17HGZ1GKergYKXEPKvlx5Q1FdXq_8/edit?usp=sharing"> PPT
+    <a href="https://www.youtube.com/watch?v=H0JqdYWccrc&feature=youtu.be">Video Presentation</a>
+    <a href="https://docs.google.com/presentation/d/1hWQt5XeivjrirCqtKkpt6Tr2KGtNv3Qq8sSn08gPFlI/edit?usp=sharing"> PPT
         Presentation </a>
+
+    <h3 align="middle"> References </h3>
+    <a href="https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix">Pix2pix</a>
+    </br>
+    <a href="https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix">CycleGAN</a>
+    </br>
+    <a href="https://arxiv.org/abs/1602.07360">Squeezenet</a>
+    </br>
+    <a href="http://cs231n.stanford.edu/">Stanford 231n</a>
+
+    <h3 align="middle"> Contributions </h3>
+    <h3> Hong Jun Jeon: </h3>
+    <p>Lead the altering BRDF portion of the project. Tested CycleGAN and pix2pix initially on the ImageNet/Google images. When the new Raytraced data was produced, tested pix2pix with several differen NN architectures</p>
+    <h3> Yiqi (Eric) Hou: </h3>
+    <p>Lead the image quality improvement portion of the project. When the Raytraced data was produced, trained several NN architectures to learn the mapping between low and high quality renders.</p>
+    <h3> Jesse Ou </h3>
+    <p>Lead the data collection portion of the project. Modified the project 3-2 pathtracer to efficiently render images with different camera extrinsics, environment lights (.exr), and surface BRDFs.</p>
 </div>
 
 </body>

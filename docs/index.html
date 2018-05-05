@@ -1,23 +1,24 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-<style>
-  body {
-    padding: 100px;
-    width: 1000px;
-    margin: auto;
-    text-align: left;
-    font-weight: 300;
-    font-family: 'Open Sans', sans-serif;
-    color: #121212;
-  }
-  h1, h2, h3, h4 {
-    font-family: 'Source Sans Pro', sans-serif;
-  }
-</style>
-<title>CS 184 Final Project</title>
-<meta http-equiv="content-type" content="text/html; charset=utf-8" />
-<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+    <style>
+        body {
+            padding: 100px;
+            width: 1000px;
+            margin: auto;
+            text-align: left;
+            font-weight: 300;
+            font-family: 'Open Sans', sans-serif;
+            color: #121212;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Source Sans Pro', sans-serif;
+        }
+    </style>
+    <title>CS 184 Final Project</title>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
 </head>
 
 
@@ -29,332 +30,507 @@
 <h3 align="middle">Yiqi (Eric) Hou, 3031846767</h3>
 <h3 align="middle">Jesse Ou, 3032141165</h3>
 <br><br>
-  <div align="center">
+<div align="center">
     <table style="width=100%">
-      <tr>
-        <td align="middle">
-        <img src="Images/GAN.png" width="580px" />
-      </tr>
+        <tr>
+            <td align="middle">
+                <img src="Images/GAN.png" width="580px"/>
+            </td>
+        </tr>
     </table>
-  </div>
+</div>
 
 <div class="padded">
-  <h2 align="middle">Our Idea</h2>
+    <h2 align="middle">Our Idea</h2>
 
-    <p>While .dae files that describe scenes of interest are incredibly descriptive, they are not plentiful. Images, while less descriptive, are ubiquitous. It would be interesting and useful if we could alter the BRDFs of arbitrary objects in our images. We can change a picture of a mug from a lambertian brdf to a glossy one (and vice versa). It could also improve 3D reconstruction via binocular stereopsis because algorithms for finding corresponding points assume that objects in the scene have lambertian surface brdfs. While this may be ambitious (and we have a backup plan), ultimately we hope to produce a project that alters/improves a commodity that is prevalent in everyone’s life: an image file.</p>
-  <h2 align="middle">Quality Improvement</h2>
-  <p>LapSRN is a recent idea that extracts key features from an image and uses those features to improve the quality of the original image. 
-  It has produced great results on superresolution of many images from the ImageNet dataset up to 8x superresolution. So far, we have created the two networks and are debugging the
-  network itself. The research has worked on superresolution, but we are working on a quality improvement neural network pipeline that takes in low-quality renders with low ray sample counts and 
-  shallow ray depths and improving the renders such that they have higher effective quality. To do so, we are also building up a large dataset of renders of simple images, such as the ones from our
-  projects 3-1 and 3-2, with two versions of renders for each scene/camera pair: one with low quality, and one with high quality.</p>
-  <h2 align="middle"> CycleGAN Failures: </h2>
-    <p> CycleGAN is a recently proposed idea that takes two thematic datasets of images and applies a style transfer between the two. It produced astounding results in changing horses to zebras and vice versa, applying Monet/Van Gogh style artistry to normal camera images, and infilling crude facades of buildings. But perhaps the most remarkable aspect of CycleGan is that it learns this mapping without paired images. It just needs a large dataset of horses and a large dataset of zebras and no structured correlation between them.</p>
-    <p>Therefore, our first approach was to scrape ImageNet and Google for images of glass balls and basketballs to train CycleGAN to learn the mapping. One difficulty we encountered was a lack images available on the web. Our training sets were only ~400 images for each type of ball. We trained for 200 epochs on a neural network with 7 residual blocks. The residual blocks are very useful in image to image problems because the skip connections help forward useful information obtained early into the net and make sure that it isn’t lost during the upsampling stage. </p>
-    <p> Our results were unusable; namely, CycleGan was unable to learn the correspondence between the glass ball and the basketball. In retrospect this is likely due to the dearth of training data and the sheer difference in appearance of all the glass balls in each image. A glass ball’s appearance is determined by the light refracted from its background so 400 images was nowhere near enough to achieve the result we wanted. </p>
+    <p>While .dae files that describe scenes of interest are incredibly descriptive, they are not plentiful. Images,
+        while less descriptive, are ubiquitous. It would be interesting and useful if we could alter the BRDFs of
+        arbitrary objects in our images. We can change a picture of a mug from a lambertian brdf to a glossy one (and
+        vice versa). It could also improve 3D reconstruction via binocular stereopsis because algorithms for finding
+        corresponding points assume that objects in the scene have lambertian surface brdfs. While this may be ambitious
+        (and we have a backup plan), ultimately we hope to produce a project that alters/improves a commodity that is
+        prevalent in everyone’s life: an image file.</p>
+    <h2 align="middle">Dataset</h2>
+    <p>To achieve our goal of BRDF conversion, we required paired images that differed in diffuse vs. glass BRDF. As for
+        upsampling, we needed paired images that differed in low vs. high quality. We performed the data collection by
+        automating the image generation with a CPU based ray tracer that rendered objects inside an environment with a
+        360° view which was loaded from one of 5 open sourced .exr files.
+        <br/><br/>Upon collecting data for upsampling, the input image would be of an object that was raytraced with 1 light
+        sample. The output image would have the same parameters as the input image except with 16 light samples. The
+        objects in these images had a microfacet BRDF with refractive indices (η) and extinction coefficients (k) that
+        held uniformly randomized RGB values between 0 and 1 and a uniformly randomized absorption coefficient (α)
+        between 0.005 and 0.05. For data on converting diffuse BRDFs into glass BRDFs, we firstly raytraced a diffuse
+        sphere. Then for the second image, we ran the raytracer with the same parameters while using a glass sphere
+        instead a diffuse one. In both of these images, we used 16 light samples.
+        <br/><br/>For all the paired images in both tasks, we generated them with a 400x600 pixel resolution. The purpose of using
+        this low resolution was to keep rendering time brief due to our team’s limited computational resources and time.
+        In this data collection process, we also ensured the data would allow flexibility in our machine learning
+        algorithm. To carry out this task, we varied the camera position between 0.5 and 1.5 meters, and we changed the
+        angle from the horizontal between -1/8 radians and 1 radian. These values ensured that the image would capture the object in a variety of
+        perspectives while also ensuring the objects remained on screen. Had the object been offscreen, it would
+        generate useless data and extend the number of images we would need to generate in order to produce the same
+        effectiveness in our results. We uniformly randomized the position and angle along with the selection of
+        environment to avoid any patterns that would decrease flexibility in the machine learning algorithm. For the
+        upsampling data collection process, we uniformly randomized the object chosen with the same purpose of
+        increasing flexibility. The possible objects used were a rabbit, dragon, winged statue, and coil. In total, we
+        generated around 25,000 pairs of images for both upsampling and BRDF conversion cumulatively.
+        <br/><br/>Upon reflection, to increase the flexibility of our machine learning algorithms, we could alter a few processes
+        in exchange for more resources and time. Our first fix would be to vary image resolutions to be both lower and
+        higher. This would allow for upsampling and BRDF conversion to be done on lower and higher resolution images.
+        Our second fix would be to increase the pool of environments which would potentially increase the accuracy of
+        refraction due to the variety of different light rays created from reflecting off of the environment. Our third
+        fix would be to increase the object pool for both upsampling and BRDF conversion to allow our algorithm to
+        upsample or convert the BRDF for more objects.
+        <br/><br/>
+    </p>
+    <h2 align="middle">Quality Improvement</h2>
+    <p>LapSRN is a recent idea that extracts key features from an image and uses those features to improve the quality
+        of the original image.
+        It has produced great results on superresolution of many images from the ImageNet dataset up to 8x
+        superresolution. While the task is not very exciting, it has displayed the ability of convolutional neural networks
+        to learn how real world physics and optics work and apply it to extract information. Based on this idea of inferring
+        the qualities of the real world and incorporating it into generated images, we took the general LapSRN architecture
+        and adapted it instead to quality improvement.</p>
+    <p>The LapSRN network has two main components: a feature extractor and a feature incorporator. The feature
+        extractor performs the job of extracting information from the image, here particularly including implicit image
+        segmentation to identify the object to improve and BRDF quality inference. This feature map is extracted and
+        appended to the original image, on which the second part of the network, the incorporator, applies its feature
+        incorporation. In this process, this network implicitly learns how the features extracted earlier, particularly
+        the BRDF and image segmentation information, should actually be used in improving the image.</p>
+    <p>Below, you can see a diagram illustrating the high-level architecture that we used.</p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="images/lapsrn.png" width="580px"/>
+            </tr>
+        </table>
+    </div>
+    <p>On a lower level, we altered the SqueezeNet Fire module to adjust it to our task a bit more. In particular, instead
+        of a ratio of 1:1 for 1x1 and 3x3 convolutional kernels, we combine a 1x1, 3x3, and 3x3 with a stride of 3 in
+        a ratio of 2:1:1. This way, the network can learn to incorporate more spatial information and cover larger
+        effective receptive fields. This way, information can be spread throughout the entire image without reducing the
+        feature mapping to 1x1. Additionally, we tried both L1, L2, and hybrid losses, but the L2 loss network seemed
+        to have the best qualitative results. Thus, we show results from the L2 loss network. The below results are after
+        25 epochs of training on about 20,000 paired images.</p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="images/input1.png" width="595px"/>
+                    <figcaption align="middle">Input (Low Quality)</figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/pred1.png" width="595px"/>
+                    <figcaption align="middle">Predicted (Low Quality -> ML)</figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/output1.png" width="595px"/>
+                    <figcaption align="middle">Output (High Quality)</figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/input2.png" width="595px"/>
+                    <figcaption align="middle">Input (Low Quality)</figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/pred2.png" width="595px"/>
+                    <figcaption align="middle">Predicted (Low Quality -> ML)</figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/output2.png" width="595px"/>
+                    <figcaption align="middle">Output (High Quality)</figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/input3.png" width="595px"/>
+                    <figcaption align="middle">Input (Low Quality)</figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/pred3.png" width="595px"/>
+                    <figcaption align="middle">Predicted (Low Quality -> ML)</figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/output3.png" width="595px"/>
+                    <figcaption align="middle">Output (High Quality)</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <h2 align="middle"> CycleGAN Failures: </h2>
+    <p> CycleGAN is a recently proposed idea that takes two thematic datasets of images and applies a style transfer
+        between the two. It produced astounding results in changing horses to zebras and vice versa, applying Monet/Van
+        Gogh style artistry to normal camera images, and infilling crude facades of buildings. But perhaps the most
+        remarkable aspect of CycleGan is that it learns this mapping without paired images. It just needs a large
+        dataset of horses and a large dataset of zebras and no structured correlation between them.</p>
+    <p>Therefore, our first approach was to scrape ImageNet and Google for images of glass balls and basketballs to
+        train CycleGAN to learn the mapping. One difficulty we encountered was a lack images available on the web. Our
+        training sets were only ~400 images for each type of ball. We trained for 200 epochs on a neural network with 7
+        residual blocks. The residual blocks are very useful in image to image problems because the skip connections
+        help forward useful information obtained early into the net and make sure that it isn’t lost during the
+        upsampling stage. </p>
+    <p> Our results were unusable; namely, CycleGan was unable to learn the correspondence between the glass ball and
+        the basketball. In retrospect this is likely due to the dearth of training data and the sheer difference in
+        appearance of all the glass balls in each image. A glass ball’s appearance is determined by the light refracted
+        from its background so 400 images was nowhere near enough to achieve the result we wanted. </p>
 
     <div align="center">
-      <table style="width=100%">
-        <tr>
-          <td align="middle">
-          <img src="GoodExamples/CycleGAN.png" width="580px" />
-        </tr>
-      </table>
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="GoodExamples/CycleGAN.png" width="580px"/>
+            </tr>
+        </table>
     </div>
+
 
     <h3 align="middle"> Pix2Pix Failures: </h3>
-      <p> Our next approach was to make the association between balls more direct. We generated paired data by using a Hough Circle algorithm with thresholding to indicate where the sphere was in the image and blackening those pixels. With this paired dataset, we shifted to pix2pix, a cGAN that achieves CycleGan results via paired data. Unfortunately, again, our dataset was very small and the GAN output useless results.</p>
+    <p> Our next approach was to make the association between balls more direct. We generated paired data by using a
+        Hough Circle algorithm with thresholding to indicate where the sphere was in the image and blackening those
+        pixels. With this paired dataset, we shifted to pix2pix, a cGAN that achieves CycleGan results via paired data.
+        Unfortunately, again, our dataset was very small and the GAN output useless results.</p>
     <div align="center">
-      <table style="width=100%">
-        <tr>
-          <td align="middle">
-          <img src="GoodExamples/HoughCircles.png" width="580px" />
-        </tr>
-      </table>
-    </div>
-  </br>
-  </br>
-  <h2 align="middle"> We Need More Data </h2>
-    <h3 align="middle"> Generating Images via RayTracer and Environment Lighting: </h3>
-      <p>We pinpointed that the flaw in our process was the lack of training examples. While the pix2pix and CycleGan were able to get reasonable results with ~1000 training images, Zhu et. al. were solving a much simpler problem. They were remapping textures. The “texture” in a glass brdf is a function of the background behind the glass. In some of their more difficult tasks i.e. colorizing a handbag given a binary black/white sketch, the networks required over 10,000 images. We realized that in order to increase our training set size, we would have to generate our own data.</p>
-      <p>As outlined in the data collection section, we modified our Project 3-2 pathtracer to generate images of lambertian and glass balls with different environment lightings and camera extrinsics. While it was difficult to find many free .exr files online, we were able to generate images from 14 different .exr environment lightings.</p>
-      <P>Fun fact: We each spun up 3-4 instructional accounts and ran our pathtracer script on hive/soda machines via ssh for several days. We became oh so familiar with the 4GB memory limit ;).</p>
-    <h3 align="middle"> Pix2pix Success </h3>
-      <p>The pix2pix architecture is a Generative Adversarial Network (GAN). GANs consists of a generator network and a discriminator network. The Generator Network’s job is to process the input image into an output image. The Discriminator Network’s job is to distinguish the Generator’s produced output from the ground truth.</p>
-      <p>In terms of network architecture, the discriminator is a fully convolutional network with skip connections. FCN’s with a downsampling stage, bottleneck, and upsampling stage are ubiquitous in the image to image domain. More recently, it has been shown that adding skip connections between the downsampling and upsampling layers produces better results. Scientists in the vision community believe this is because the skip connections ensure that higher level features computed earlier in the network are not lost when reconstructing the image. An FCN with concatenation skip connections is referred to as a Unet. During testing, we tried networks with 7, 8, and 9 downsampling/upsampling layers. For the 9 layer network we had to upscale the resolution of our images to 512x512. This network took longer to train and did not produce noticeably different results from the 256x256 input image 8 layer network.</p>
-      <div align="center">
         <table style="width=100%">
-          <tr>
-            <td align="middle">
-            <img src="GoodExamples/unet.png" width="380px" />
-          </tr>
+            <tr>
+                <td align="middle">
+                    <img src="GoodExamples/HoughCircles.png" width="580px"/>
+            </tr>
         </table>
-      </div>
-      <p>The discriminator is a convolutional neural network that judges whether an image is fake or real. Vision scientists have determined that simply taking an L1 or L2 loss between the generator’s output and the ground truth do not produce good results because L1 and L2 distance are very different from human perspective difference. L2 distance blurs error across the image (it’s more beneficial to have 2 pixels with 0.5 error than 1 pixel with 1.0 error). We observed this in our image quality improvement network. L1 distance is less egregious but still fails to preserve sharp edges in an image, a key train that we as humans look for in a real image. However, these two metrics are good at capturing lower frequency variation in the image. The task of our discriminator will be to penalize high frequency error. Zhu et. al. defined this high frequency loss in their “PatchGAN loss”, a loss learned by an FCN with an nxn receptive field (n < image width/height). This discriminator network can be interpreted as a learned loss function.</p>
+    </div>
+    </br>
+    </br>
+    <h2 align="middle"> We Need More Data </h2>
+    <h3 align="middle"> Generating Images via RayTracer and Environment Lighting: </h3>
+    <p>We pinpointed that the flaw in our process was the lack of training examples. While the pix2pix and CycleGan were
+        able to get reasonable results with ~1000 training images, Zhu et. al. were solving a much simpler problem. They
+        were remapping textures. The “texture” in a glass brdf is a function of the background behind the glass. In some
+        of their more difficult tasks i.e. colorizing a handbag given a binary black/white sketch, the networks required
+        over 10,000 images. We realized that in order to increase our training set size, we would have to generate our
+        own data.</p>
+    <p>As outlined in the data collection section, we modified our Project 3-2 pathtracer to generate images of
+        lambertian and glass balls with different environment lightings and camera extrinsics. While it was difficult to
+        find many free .exr files online, we were able to generate images from 14 different .exr environment
+        lightings.</p>
+    <P>Fun fact: We each spun up 3-4 instructional accounts and ran our pathtracer script on hive/soda machines via ssh
+        for several days. We became oh so familiar with the 4GB memory limit ;).</p>
+    <h3 align="middle"> Pix2pix Success </h3>
+    <p>The pix2pix architecture is a Generative Adversarial Network (GAN). GANs consists of a generator network and a
+        discriminator network. The Generator Network’s job is to process the input image into an output image. The
+        Discriminator Network’s job is to distinguish the Generator’s produced output from the ground truth.</p>
+    <p>In terms of network architecture, the discriminator is a fully convolutional network with skip connections. FCN’s
+        with a downsampling stage, bottleneck, and upsampling stage are ubiquitous in the image to image domain. More
+        recently, it has been shown that adding skip connections between the downsampling and upsampling layers produces
+        better results. Scientists in the vision community believe this is because the skip connections ensure that
+        higher level features computed earlier in the network are not lost when reconstructing the image. An FCN with
+        concatenation skip connections is referred to as a Unet. During testing, we tried networks with 7, 8, and 9
+        downsampling/upsampling layers. For the 9 layer network we had to upscale the resolution of our images to
+        512x512. This network took longer to train and did not produce noticeably different results from the 256x256
+        input image 8 layer network.</p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="GoodExamples/unet.png" width="380px"/>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>The discriminator is a convolutional neural network that judges whether an image is fake or real. Vision
+        scientists have determined that simply taking an L1 or L2 loss between the generator’s output and the ground
+        truth do not produce good results because L1 and L2 distance are very different from human perspective
+        difference. L2 distance blurs error across the image (it’s more beneficial to have 2 pixels with 0.5 error than
+        1 pixel with 1.0 error). We observed this in our image quality improvement network. L1 distance is less
+        egregious but still fails to preserve sharp edges in an image, a key train that we as humans look for in a real
+        image. However, these two metrics are good at capturing lower frequency variation in the image. The task of our
+        discriminator will be to penalize high frequency error. Zhu et. al. defined this high frequency loss in their
+        “PatchGAN loss”, a loss learned by an FCN with an nxn receptive field (n < image width/height). This
+        discriminator network can be interpreted as a learned loss function.</p>
     <h3 align="middle"> Trial and Tribulation in Training </h3>
-    <p>We originally trained the network on ~7000 images for 200 epochs. When observing the results, scenes with trees were much more realistic than scenes with buildings. The buildings looked completely warped and their salient features (windows/markings) were either nonexistent or warped on the image. We realized that many of our .exr files had trees while only a few had buildings. Furthermore, since the trees are dark green and lack high frequency variation, it was harder for us to spot the error in those examples.</p>
-    <p>To compensate, we generated more training examples from the environments with buildings and added them to our dataset. Our final dataset consisted of ~14-15k images. However, instead of completely retraining our network with our new data, we fine-tuned it on the network we had already trained for the original 7000 images. After another 200 epochs of training, equivalent to 400 total epochs of training, the results for environments with buildings improved dramatically (while the results for trees remained good).</p>
+    <p>We originally trained the network on ~7000 images for 200 epochs. When observing the results, scenes with trees
+        were much more realistic than scenes with buildings. The buildings looked completely warped and their salient
+        features (windows/markings) were either nonexistent or warped on the image. We realized that many of our .exr
+        files had trees while only a few had buildings. Furthermore, since the trees are dark green and lack high
+        frequency variation, it was harder for us to spot the error in those examples.</p>
+    <p>To compensate, we generated more training examples from the environments with buildings and added them to our
+        dataset. Our final dataset consisted of ~14-15k images. However, instead of completely retraining our network
+        with our new data, we fine-tuned it on the network we had already trained for the original 7000 images. After
+        another 200 epochs of training, equivalent to 400 total epochs of training, the results for environments with
+        buildings improved dramatically (while the results for trees remained good).</p>
 
     <h2 align="middle"> Trees 200 Epochs </h2>
     <div align="middle">
-      <table align="middle" style="width=100%">
-        <tr>
-          <td>
-            <figcaption align="middle">Lambertian</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass GAN Output</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass Ground Truth</figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Original/1real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/1fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/1real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-         <tr>
-          <td>
-            <img src="GoodExamples/Original/2real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/2fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/2real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-         <tr>
-          <td>
-            <img src="GoodExamples/Original/3real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/3fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/3real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-         <tr>
-          <td>
-            <img src="GoodExamples/Original/4real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/4fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/4real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-      </table>
+        <table align="middle" style="width=100%">
+            <tr>
+                <td>
+                    <figcaption align="middle">Lambertian</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass GAN Output</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass Ground Truth</figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Original/1real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/1fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/1real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Original/2real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/2fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/2real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Original/3real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/3fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/3real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Original/4real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/4fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/4real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+        </table>
     </div>
-  </br>
-  </br>
-  </br>
-  </br>
-  </br>
-  <h2 align="middle"> Doge Palace 200 Epochs </h2>
+    </br>
+    </br>
+    </br>
+    </br>
+    </br>
+    <h2 align="middle"> Doge Palace 200 Epochs </h2>
     <div align="middle">
-      <table align="middle" style="width=100%">
-        <tr>
-          <td>
-            <figcaption align="middle">Lambertian</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass GAN Output</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass Ground Truth</figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Original/6real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/6fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/6real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <img src="GoodExamples/Original/7real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/7fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/7real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-      </table>
+        <table align="middle" style="width=100%">
+            <tr>
+                <td>
+                    <figcaption align="middle">Lambertian</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass GAN Output</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass Ground Truth</figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Original/6real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/6fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/6real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Original/7real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/7fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/7real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+        </table>
     </div>
-  </br>
-  </br>
-  </br>
-  </br>
-  </br>
-  <h2 align="middle"> Grace 200 Epochs </h2>
+    </br>
+    </br>
+    </br>
+    </br>
+    </br>
+    <h2 align="middle"> Grace 200 Epochs </h2>
     <div align="middle">
-      <table align="middle" style="width=100%">
-        <tr>
-          <td>
-            <figcaption align="middle">Lambertian</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass GAN Output</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass Ground Truth</figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Original/8real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/8fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/8real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <img src="GoodExamples/Original/9real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/9fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Original/9real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-      </table>
+        <table align="middle" style="width=100%">
+            <tr>
+                <td>
+                    <figcaption align="middle">Lambertian</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass GAN Output</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass Ground Truth</figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Original/8real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/8fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/8real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Original/9real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/9fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Original/9real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+        </table>
     </div>
-  </br>
-  </br>
-  </br>
-  </br>
-  </br>
+    </br>
+    </br>
+    </br>
+    </br>
+    </br>
     <h2 align="middle"> Doge Palace 400 Epochs </h2>
     <div align="middle">
-      <table align="middle" style="width=100%">
-        <tr>
-          <td>
-            <figcaption align="middle">Lambertian</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass GAN Output</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass Ground Truth</figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Finetuned/2real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/2fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/2real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Finetuned/3real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/3fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/3real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Finetuned/6real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/6fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/6real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Finetuned/8real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/8fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/8real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-      </table>
+        <table align="middle" style="width=100%">
+            <tr>
+                <td>
+                    <figcaption align="middle">Lambertian</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass GAN Output</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass Ground Truth</figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Finetuned/2real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/2fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/2real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Finetuned/3real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/3fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/3real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Finetuned/6real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/6fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/6real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Finetuned/8real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/8fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/8real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+        </table>
     </div>
     </br>
     </br>
@@ -363,50 +539,50 @@
     </br>
     <h2 align="middle"> Grace 400 Epochs </h2>
     <div align="middle">
-      <table align="middle" style="width=100%">
-        <tr>
-          <td>
-            <figcaption align="middle">Lambertian</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass GAN Output</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass Ground Truth</figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Finetuned/4real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/4fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/4real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Finetuned/5real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/5fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/5real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-      </table>
+        <table align="middle" style="width=100%">
+            <tr>
+                <td>
+                    <figcaption align="middle">Lambertian</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass GAN Output</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass Ground Truth</figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Finetuned/4real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/4fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/4real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Finetuned/5real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/5fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/5real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+        </table>
     </div>
     </br>
     </br>
@@ -415,65 +591,79 @@
     </br>
     <h2 align="middle"> Field 400 Epochs </h2>
     <div align="middle">
-      <table align="middle" style="width=100%">
-        <tr>
-          <td>
-            <figcaption align="middle">Lambertian</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass GAN Output</figcaption>
-          </td>
-          <td>
-            <figcaption align="middle">Glass Ground Truth</figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Finetuned/7real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/7fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/7real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="GoodExamples/Finetuned/9real_A.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/9fake_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-          <td>
-            <img src="GoodExamples/Finetuned/9real_B.png" align="middle" width="256px"/>
-            <figcaption align="middle"></figcaption>
-          </td>
-        </tr>
-        <br>
-      </table>
+        <table align="middle" style="width=100%">
+            <tr>
+                <td>
+                    <figcaption align="middle">Lambertian</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass GAN Output</figcaption>
+                </td>
+                <td>
+                    <figcaption align="middle">Glass Ground Truth</figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Finetuned/7real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/7fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/7real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+            <tr>
+                <td>
+                    <img src="GoodExamples/Finetuned/9real_A.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/9fake_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+                <td>
+                    <img src="GoodExamples/Finetuned/9real_B.png" align="middle" width="256px"/>
+                    <figcaption align="middle"></figcaption>
+                </td>
+            </tr>
+            <br>
+        </table>
     </div>
-    <p> add more shit here </p>
     <h3 align="middle"> Failures </h3>
-    <p>While the input and ground truth images were clearly paired (one has a diffuse ball, the other a glass one), in some of the images, the ball is difficult to locate and in these cases, the GAN mapped the result to an incorrect region of the image:</p>
+    <p>While the input and ground truth images were clearly paired (one has a diffuse ball, the other a glass one), in
+        some of the images, the ball is difficult to locate and in these cases, the GAN mapped the result to an
+        incorrect region of the image:</p>
 
-    <p>Another failure case is in images with blatant occlusion. The glass sphere refracts light behind it but its FOV is significantly larger than that of the camera. Therefore, especially when the camera is close to the ball, it is unreasonable for the GAN or even a human to reconstruct occluded portions of the scene onto the sphere’s surface. Examples:</p>
+    <p>Another failure case is in images with blatant occlusion. The glass sphere refracts light behind it but its FOV
+        is significantly larger than that of the camera. Therefore, especially when the camera is close to the ball, it
+        is unreasonable for the GAN or even a human to reconstruct occluded portions of the scene onto the sphere’s
+        surface. Examples:</p>
 
     <h3 align="middle"> Future Work </h3>
-    <p>Ideally, we would like to get better results faster. The most important thing to learn is the physics of light refraction, flipping the background when displaying it on the sphere. One way to learn this is to isolate all variables besides this flipping aspect i.e. have textureless environments with just a simple shape or symbol that is refracted on the ball’s surface. This will learn focus on learning the 180 degree rotation without also worrying about mapping complex textures realistically. Afterwards, we can finetune this network to produce results for fully textured environments. Likely this process, done with a better dataset (more distinct .exr files and less occlusion), will produce better results with less training time. We have a hunch that more data and more training will continue to give better results but from genuine engineering curiosity, we wonder how this process could be sped up. Afterall, it doesn’t take a human 15,000 images and over 48 hours of training to learn that glass rotates is background 180 degrees. </p>
+    <p>Ideally, we would like to get better results faster. The most important thing to learn is the physics of light
+        refraction, flipping the background when displaying it on the sphere. One way to learn this is to isolate all
+        variables besides this flipping aspect i.e. have textureless environments with just a simple shape or symbol
+        that is refracted on the ball’s surface. This will learn focus on learning the 180 degree rotation without also
+        worrying about mapping complex textures realistically. Afterwards, we can finetune this network to produce
+        results for fully textured environments. Likely this process, done with a better dataset (more distinct .exr
+        files and less occlusion), will produce better results with less training time. We have a hunch that more data
+        and more training will continue to give better results but from genuine engineering curiosity, we wonder how
+        this process could be sped up. Afterall, it doesn’t take a human 15,000 images and over 48 hours of training to
+        learn that glass rotates is background 180 degrees. </p>
 
     <h3 align="middle"> PPT and Video </h3>
 
 
-  <a href="https://www.youtube.com/watch?v=kif628mP_OI&feature=youtu.be">Video Presentation</a>
-    <a href="https://docs.google.com/presentation/d/1LQGJmR4-aPc1ka17HGZ1GKergYKXEPKvlx5Q1FdXq_8/edit?usp=sharing"> PPT Presentation </a>
+    <a href="https://www.youtube.com/watch?v=kif628mP_OI&feature=youtu.be">Video Presentation</a>
+    <a href="https://docs.google.com/presentation/d/1LQGJmR4-aPc1ka17HGZ1GKergYKXEPKvlx5Q1FdXq_8/edit?usp=sharing"> PPT
+        Presentation </a>
 </div>
 
 </body>
